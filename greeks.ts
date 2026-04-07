@@ -1,61 +1,56 @@
-/**
- * greeks.ts — Calcul fermé des Greeks BSM
- *
- * Toutes les dérivées sont analytiques (pas de différences finies).
- * Vega et Rho sont normalisés par 1% pour l'usage pratique.
- * Theta est exprimé par jour calendaire (divisé par 365).
- *
- * Limites :
- *  - Gamma et Vega → ∞ quand T → 0 et S ≈ K (ATM)
- *  - Ces instabilités sont gérées par la validation en amont
- */
-
-import { normalCDF, normalPDF } from './utils';
-import { computeD1D2, OptionType } from './blackScholes';
-
-export interface Greeks {
-  delta: number;  // ∂V/∂S
-  gamma: number;  // ∂²V/∂S²
-  vega:  number;  // ∂V/∂σ (per 1% vol move)
-  theta: number;  // ∂V/∂t (per calendar day, sign convention: negative for long options)
-  rho:   number;  // ∂V/∂r (per 1% rate move)
-}
+import { normalCDF, normalPDF, computeD1D2 } from "./pricing";
+import type { Greeks, OptionType } from "./types";
 
 export function computeGreeks(
-  S: number, K: number, T: number,
-  r: number, q: number, sigma: number,
+  S: number,
+  K: number,
+  T: number,
+  r: number,
+  sigma: number,
+  q: number,
   type: OptionType
 ): Greeks {
-  if (S <= 0 || K <= 0 || T <= 1e-10 || sigma <= 1e-10) {
-    return { delta: 0, gamma: 0, vega: 0, theta: 0, rho: 0 };
+  if (T <= 0 || sigma <= 0) {
+    const atm = Math.abs(S - K) < 1e-10;
+    return {
+      delta: type === "call" ? (S >= K ? 1 : 0) : (S <= K ? -1 : 0),
+      gamma: atm ? Infinity : 0,
+      theta: 0,
+      vega: 0,
+      rho: 0,
+    };
   }
 
-  const { d1, d2, sqrtT } = computeD1D2(S, K, T, r, q, sigma);
-  const eqT  = Math.exp(-q * T);
-  const erT  = Math.exp(-r * T);
-  const φ_d1 = normalPDF(d1);
+  const { d1, d2 } = computeD1D2(S, K, T, r, sigma, q);
+  const sqrtT = Math.sqrt(T);
+  const df = Math.exp(-r * T);
+  const dq = Math.exp(-q * T);
+  const pdf1 = normalPDF(d1);
 
-  // Delta : probabilité risque-neutre d'exercice (ajustée dividendes)
-  const delta = type === 'call'
-    ? eqT * normalCDF(d1)
-    : -eqT * normalCDF(-d1);
+  const gamma = (dq * pdf1) / (S * sigma * sqrtT);
+  const vega = S * dq * pdf1 * sqrtT;
 
-  // Gamma : identique call et put (parité put-call)
-  const gamma = (eqT * φ_d1) / (S * sigma * sqrtT);
+  let delta: number;
+  let theta: number;
+  let rho: number;
 
-  // Vega : /100 → variation par 1 point de volatilité (1%)
-  const vega = S * eqT * φ_d1 * sqrtT / 100;
+  if (type === "call") {
+    delta = dq * normalCDF(d1);
+    theta =
+      (-(S * dq * pdf1 * sigma) / (2 * sqrtT) -
+        r * K * df * normalCDF(d2) +
+        q * S * dq * normalCDF(d1)) /
+      365;
+    rho = K * T * df * normalCDF(d2) / 100;
+  } else {
+    delta = dq * (normalCDF(d1) - 1);
+    theta =
+      (-(S * dq * pdf1 * sigma) / (2 * sqrtT) +
+        r * K * df * normalCDF(-d2) -
+        q * S * dq * normalCDF(-d1)) /
+      365;
+    rho = (-K * T * df * normalCDF(-d2)) / 100;
+  }
 
-  // Theta (convention : perte de valeur sur 1 jour = négatif pour position longue)
-  const thetaBase = -(S * eqT * φ_d1 * sigma) / (2 * sqrtT);
-  const theta = type === 'call'
-    ? (thetaBase - r * K * erT * normalCDF(d2)  + q * S * eqT * normalCDF(d1))  / 365
-    : (thetaBase + r * K * erT * normalCDF(-d2) - q * S * eqT * normalCDF(-d1)) / 365;
-
-  // Rho : /100 → variation par 1% de taux
-  const rho = type === 'call'
-    ?  K * T * erT * normalCDF(d2)  / 100
-    : -K * T * erT * normalCDF(-d2) / 100;
-
-  return { delta, gamma, vega, theta, rho };
+  return { delta, gamma, theta, vega, rho };
 }

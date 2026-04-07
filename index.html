@@ -1,719 +1,445 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OPT // OPTION PRICING TERMINAL v2.0</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  *{box-sizing:border-box;margin:0;padding:0;}
-  :root{
-    --bg0:#080A0D;--bg1:#0D1117;--bg2:#141920;--bg3:#1C2330;--bg4:#232E3C;
-    --accent:#00FF9F;--accent2:#00C97A;--accent3:#00865A;
-    --blue:#4DAAFF;--orange:#FF8C42;--red:#FF4D4D;--purple:#A78BFA;
-    --text0:#E8EDF3;--text1:#A8B5C8;--text2:#5A6A82;--text3:#2E3D52;
-    --border:#1E2D3E;--border2:#263345;
-    --font-mono:'IBM Plex Mono',monospace;--font-sans:'IBM Plex Sans',sans-serif;
-  }
-  body{background:var(--bg0);color:var(--text0);font-family:var(--font-sans);font-size:13px;min-height:600px;overflow-x:hidden;}
-  
-  /* LAYOUT */
-  .terminal{display:flex;flex-direction:column;height:100%;min-height:600px;}
-  .top-bar{background:var(--bg1);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
-  .top-bar-left{display:flex;align-items:center;gap:12px;}
-  .dot{width:10px;height:10px;border-radius:50%;}
-  .d-red{background:#FF5F57;}.d-yellow{background:#FFBD2E;}.d-green{background:#28C941;}
-  .app-title{font-family:var(--font-mono);font-size:12px;font-weight:500;color:var(--text1);letter-spacing:0.08em;}
-  .accent-text{color:var(--accent);}
-  .status-badge{font-family:var(--font-mono);font-size:10px;color:var(--accent);background:rgba(0,255,159,0.08);border:1px solid rgba(0,255,159,0.2);border-radius:3px;padding:2px 8px;}
-  
-  .main-layout{display:grid;grid-template-columns:280px 1fr;flex:1;overflow:hidden;min-height:0;}
-  
-  /* SIDEBAR */
-  .sidebar{background:var(--bg1);border-right:1px solid var(--border);overflow-y:auto;padding:0;}
-  .sidebar-section{border-bottom:1px solid var(--border);padding:12px 14px;}
-  .section-title{font-family:var(--font-mono);font-size:9px;font-weight:600;color:var(--text2);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
-  .section-title::before{content:'';width:3px;height:3px;background:var(--accent);border-radius:50%;}
-  
-  .field-group{margin-bottom:8px;}
-  .field-label{font-family:var(--font-mono);font-size:9px;color:var(--text2);margin-bottom:3px;display:flex;justify-content:space-between;align-items:center;}
-  .field-label span{color:var(--text1);}
-  input[type=number], input[type=text], select{
-    width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:3px;
-    color:var(--text0);font-family:var(--font-mono);font-size:11px;padding:5px 8px;
-    outline:none;transition:border-color 0.15s;
-  }
-  input[type=number]:focus, select:focus{border-color:var(--accent3);}
-  select option{background:var(--bg2);}
-  
-  .toggle-row{display:flex;gap:0;border:1px solid var(--border2);border-radius:3px;overflow:hidden;}
-  .toggle-btn{flex:1;background:transparent;border:none;color:var(--text2);font-family:var(--font-mono);font-size:10px;padding:5px;cursor:pointer;transition:all 0.15s;}
-  .toggle-btn.active{background:var(--accent3);color:#000;font-weight:600;}
-  
-  .run-btn{width:100%;background:var(--accent);color:#000;border:none;border-radius:3px;font-family:var(--font-mono);font-size:11px;font-weight:600;padding:9px;cursor:pointer;letter-spacing:0.05em;transition:all 0.15s;margin-top:4px;}
-  .run-btn:hover{background:var(--accent2);}
-  .run-btn:active{transform:scale(0.99);}
-  
-  /* MAIN CONTENT */
-  .content{background:var(--bg0);overflow-y:auto;padding:0;}
-  
-  /* RESULTS GRID */
-  .results-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border-bottom:1px solid var(--border);}
-  .result-card{background:var(--bg1);padding:14px 16px;}
-  .result-label{font-family:var(--font-mono);font-size:9px;color:var(--text2);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;}
-  .result-value{font-family:var(--font-mono);font-size:22px;font-weight:500;color:var(--text0);}
-  .result-value.accent{color:var(--accent);}
-  .result-value.blue{color:var(--blue);}
-  .result-sub{font-family:var(--font-mono);font-size:10px;color:var(--text2);margin-top:2px;}
-  
-  /* GREEKS ROW */
-  .greeks-bar{background:var(--bg1);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;gap:0;overflow-x:auto;}
-  .greek-item{flex:1;min-width:80px;padding:6px 10px;border-right:1px solid var(--border);}
-  .greek-item:last-child{border-right:none;}
-  .greek-name{font-family:var(--font-mono);font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:0.12em;}
-  .greek-val{font-family:var(--font-mono);font-size:14px;font-weight:500;margin-top:2px;}
-  .greek-val.pos{color:var(--accent);}
-  .greek-val.neg{color:var(--red);}
-  .greek-val.neu{color:var(--blue);}
-  
-  /* TABS */
-  .tabs{background:var(--bg1);border-bottom:1px solid var(--border);display:flex;padding:0 16px;gap:0;}
-  .tab{font-family:var(--font-mono);font-size:10px;color:var(--text2);padding:10px 14px;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;letter-spacing:0.06em;}
-  .tab:hover{color:var(--text1);}
-  .tab.active{color:var(--accent);border-bottom-color:var(--accent);}
-  
-  .tab-content{padding:16px;}
-  
-  /* CHARTS */
-  .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-  .chart-card{background:var(--bg1);border:1px solid var(--border);border-radius:4px;padding:14px;}
-  .chart-title{font-family:var(--font-mono);font-size:9px;color:var(--text2);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;}
-  .chart-wrap{position:relative;width:100%;height:160px;}
-  
-  /* MARKET COMPARISON */
-  .market-card{background:var(--bg1);border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:12px;}
-  .market-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);}
-  .market-row:last-child{border-bottom:none;}
-  .market-key{font-family:var(--font-mono);font-size:10px;color:var(--text2);}
-  .market-val{font-family:var(--font-mono);font-size:11px;font-weight:500;}
-  
-  /* INSIGHT */
-  .insight-card{background:var(--bg2);border:1px solid rgba(0,255,159,0.15);border-left:3px solid var(--accent);border-radius:4px;padding:14px;margin-bottom:12px;}
-  .insight-title{font-family:var(--font-mono);font-size:9px;color:var(--accent);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;}
-  .insight-text{font-family:var(--font-sans);font-size:12px;color:var(--text1);line-height:1.6;}
-  .insight-text p{margin-bottom:6px;}
-  .insight-text p:last-child{margin-bottom:0;}
-  
-  /* MC STATS */
-  .mc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
-  .mc-stat{background:var(--bg2);border:1px solid var(--border);border-radius:3px;padding:8px 10px;}
-  .mc-stat-label{font-family:var(--font-mono);font-size:8px;color:var(--text2);text-transform:uppercase;letter-spacing:0.1em;}
-  .mc-stat-val{font-family:var(--font-mono);font-size:13px;font-weight:500;margin-top:2px;color:var(--text0);}
-  
-  /* SPINNER */
-  .spinner{display:inline-block;width:12px;height:12px;border:2px solid var(--text2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.6s linear infinite;}
-  @keyframes spin{to{transform:rotate(360deg);}}
-  
-  /* EMPTY STATE */
-  .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;color:var(--text2);}
-  .empty-icon{font-family:var(--font-mono);font-size:32px;margin-bottom:12px;color:var(--text3);}
-  .empty-text{font-family:var(--font-mono);font-size:11px;color:var(--text2);}
-  
-  /* IV badge */
-  .iv-row{display:flex;align-items:center;gap:8px;margin-top:4px;}
-  .iv-badge{font-family:var(--font-mono);font-size:10px;padding:2px 7px;border-radius:2px;}
-  .iv-over{background:rgba(255,77,77,0.15);color:var(--red);border:1px solid rgba(255,77,77,0.3);}
-  .iv-under{background:rgba(0,255,159,0.1);color:var(--accent);border:1px solid rgba(0,255,159,0.2);}
-  
-  ::-webkit-scrollbar{width:4px;height:4px;}
-  ::-webkit-scrollbar-track{background:transparent;}
-  ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
-</style>
+    :root {
+      --bg: #0a0a0a;
+      --bg2: #111;
+      --bg3: #161616;
+      --border: #222;
+      --border2: #2a2a2a;
+      --green: #00ff88;
+      --blue: #00aaff;
+      --red: #ff4444;
+      --orange: #ffaa00;
+      --text: #ccc;
+      --text2: #666;
+      --text3: #888;
+      --font: 'Courier New', Courier, monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+      min-height: 100vh;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    header h1 {
+      font-size: 13px;
+      letter-spacing: 0.15em;
+      color: var(--green);
+    }
+
+    #status {
+      font-size: 11px;
+      color: var(--green);
+      letter-spacing: 0.1em;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      height: calc(100vh - 49px);
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 20px 16px;
+    }
+
+    .section-title {
+      font-size: 10px;
+      color: var(--text2);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      margin-top: 20px;
+    }
+
+    .section-title:first-child { margin-top: 0; }
+
+    .field {
+      margin-bottom: 10px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 10px;
+      color: var(--text3);
+      margin-bottom: 4px;
+      letter-spacing: 0.05em;
+    }
+
+    .field input[type="number"],
+    .field input[type="text"] {
+      width: 100%;
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+      padding: 6px 10px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .field input:focus { border-color: var(--blue); }
+
+    .radio-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .radio-group label {
+      flex: 1;
+      text-align: center;
+      padding: 7px;
+      border: 1px solid var(--border2);
+      cursor: pointer;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: var(--text3);
+      transition: all 0.15s;
+      background: var(--bg3);
+    }
+
+    .radio-group input[type="radio"] { display: none; }
+
+    .radio-group input[type="radio"]:checked + label {
+      border-color: var(--green);
+      color: var(--green);
+      background: rgba(0,255,136,0.05);
+    }
+
+    #runBtn {
+      width: 100%;
+      margin-top: 16px;
+      padding: 10px;
+      background: transparent;
+      border: 1px solid var(--green);
+      color: var(--green);
+      font-family: var(--font);
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    #runBtn:hover { background: rgba(0,255,136,0.08); }
+
+    .main-panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .placeholder {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text2);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+    }
+
+    #resultsPanel {
+      display: none;
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px;
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+
+    .result-cell {
+      background: var(--bg);
+      padding: 14px 16px;
+    }
+
+    .result-cell .label {
+      font-size: 10px;
+      color: var(--text2);
+      letter-spacing: 0.1em;
+      margin-bottom: 6px;
+    }
+
+    .result-cell .value {
+      font-size: 20px;
+      color: var(--green);
+      letter-spacing: 0.05em;
+    }
+
+    .result-cell .value.secondary { font-size: 15px; color: var(--blue); }
+    .result-cell .value.neutral { font-size: 15px; color: var(--text); }
+
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+
+    .tab-btn {
+      padding: 8px 16px;
+      background: none;
+      border: none;
+      color: var(--text2);
+      font-family: var(--font);
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: all 0.15s;
+    }
+
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--green); border-bottom-color: var(--green); }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .greeks-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+
+    .greek-cell {
+      background: var(--bg);
+      padding: 12px 14px;
+    }
+
+    .greek-cell .label {
+      font-size: 10px;
+      color: var(--text2);
+      margin-bottom: 4px;
+    }
+
+    .greek-cell .value {
+      font-size: 15px;
+      color: var(--orange);
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .chart-box {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      padding: 12px;
+    }
+
+    .chart-box h3 {
+      font-size: 10px;
+      color: var(--text2);
+      letter-spacing: 0.15em;
+      margin-bottom: 10px;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+    }
+
+    .d-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .d-cell {
+      flex: 1;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      padding: 12px 14px;
+    }
+
+    .d-cell .label { font-size: 10px; color: var(--text2); margin-bottom: 4px; }
+    .d-cell .value { font-size: 14px; color: var(--text); }
+
+    .iv-row {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      display: flex;
+      gap: 24px;
+      align-items: center;
+    }
+
+    .iv-row .iv-item .label { font-size: 10px; color: var(--text2); margin-bottom: 4px; }
+    .iv-row .iv-item .value { font-size: 14px; color: var(--blue); }
+  </style>
 </head>
 <body>
-<div class="terminal">
+  <header>
+    <h1>OPT // OPTION PRICING TERMINAL v2.0</h1>
+    <span id="status">READY</span>
+  </header>
 
-<!-- TOP BAR -->
-<div class="top-bar">
-  <div class="top-bar-left">
-    <div class="dot d-red"></div><div class="dot d-yellow"></div><div class="dot d-green"></div>
-    <span class="app-title"><span class="accent-text">OPT</span> // OPTION PRICING TERMINAL v1.0</span>
-  </div>
-  <div style="display:flex;gap:8px;align-items:center;">
-    <span class="status-badge" id="statusBadge">READY</span>
-    <span style="font-family:var(--font-mono);font-size:10px;color:var(--text2);" id="clockEl"></span>
-  </div>
-</div>
-
-<!-- MAIN LAYOUT -->
-<div class="main-layout">
-
-<!-- ═══════════════════ SIDEBAR ═══════════════════ -->
-<div class="sidebar">
-
-  <div class="sidebar-section">
-    <div class="section-title">Contract</div>
-    <div class="field-group">
-      <div class="field-label">Option Type</div>
-      <div class="toggle-row">
-        <button class="toggle-btn active" id="btnCall" onclick="setType('call')">CALL</button>
-        <button class="toggle-btn" id="btnPut" onclick="setType('put')">PUT</button>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="section-title">Contract</div>
+      <div class="section-title" style="margin-top:0;margin-bottom:6px;font-size:9px">Option Type</div>
+      <div class="radio-group">
+        <input type="radio" name="optionType" id="typeCall" value="call" checked />
+        <label for="typeCall">CALL</label>
+        <input type="radio" name="optionType" id="typePut" value="put" />
+        <label for="typePut">PUT</label>
       </div>
-    </div>
-  </div>
 
-  <div class="sidebar-section">
-    <div class="section-title">Market Parameters</div>
-    <div class="field-group"><div class="field-label">Spot Price S₀ <span id="lS">100</span></div><input type="number" id="inS" value="100" min="0.01" step="0.5" oninput="document.getElementById('lS').textContent=this.value"></div>
-    <div class="field-group"><div class="field-label">Strike K <span id="lK">100</span></div><input type="number" id="inK" value="100" min="0.01" step="0.5" oninput="document.getElementById('lK').textContent=this.value"></div>
-    <div class="field-group"><div class="field-label">Maturity T (years) <span id="lT">1</span></div><input type="number" id="inT" value="1" min="0.001" step="0.05" oninput="document.getElementById('lT').textContent=this.value"></div>
-    <div class="field-group"><div class="field-label">Risk-Free Rate r <span id="lR">5%</span></div><input type="number" id="inR" value="0.05" min="0" max="1" step="0.001" oninput="document.getElementById('lR').textContent=(this.value*100).toFixed(1)+'%'"></div>
-    <div class="field-group"><div class="field-label">Volatility σ <span id="lSig">20%</span></div><input type="number" id="inSig" value="0.20" min="0.001" max="5" step="0.005" oninput="document.getElementById('lSig').textContent=(this.value*100).toFixed(1)+'%'"></div>
-    <div class="field-group"><div class="field-label">Dividend Yield q <span id="lQ">0%</span></div><input type="number" id="inQ" value="0" min="0" max="1" step="0.001" oninput="document.getElementById('lQ').textContent=(this.value*100).toFixed(1)+'%'"></div>
-  </div>
-
-  <div class="sidebar-section">
-    <div class="section-title">Monte Carlo</div>
-    <div class="field-group"><div class="field-label">Simulations N <span id="lN">10000</span></div><input type="number" id="inN" value="10000" min="100" max="100000" step="1000" oninput="document.getElementById('lN').textContent=Number(this.value).toLocaleString()"></div>
-    <div class="field-group"><div class="field-label">Steps / Path <span id="lSteps">52</span></div><input type="number" id="inSteps" value="52" min="1" max="500" step="1" oninput="document.getElementById('lSteps').textContent=this.value"></div>
-    <div class="field-group"><div class="field-label">Seed (optional) <span></span></div><input type="number" id="inSeed" placeholder="random" min="0"></div>
-  </div>
-
-  <div class="sidebar-section">
-    <div class="section-title">Market Price (optional)</div>
-    <div class="field-group"><div class="field-label">Market Price <span id="lMkt">—</span></div><input type="number" id="inMkt" placeholder="leave blank" min="0" step="0.01" oninput="document.getElementById('lMkt').textContent=this.value||'—'"></div>
-  </div>
-
-  <div class="sidebar-section">
-    <button class="run-btn" onclick="runPricing()">▶ RUN PRICING ENGINE</button>
-  </div>
-
-</div><!-- /sidebar -->
-
-<!-- ═══════════════════ CONTENT ═══════════════════ -->
-<div class="content" id="contentArea">
-  <div class="empty-state">
-    <div class="empty-icon">▸</div>
-    <div class="empty-text">Configure parameters and run the pricing engine</div>
-  </div>
-</div>
-
-</div><!-- /main-layout -->
-</div><!-- /terminal -->
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script>
-/* ═══════════════════════════════════════════════════════════
-   MATH ENGINE — Option Pricing Terminal
-   All formulas follow risk-neutral pricing theory (BSM 1973)
-   Assumptions: frictionless market, continuous trading, lognormal GBM
-═══════════════════════════════════════════════════════════ */
-
-// ── Clock
-function updateClock(){
-  const now=new Date();
-  document.getElementById('clockEl').textContent=
-    now.toUTCString().replace('GMT','UTC').split(' ').slice(1).join(' ');
-}
-setInterval(updateClock,1000); updateClock();
-
-// ── Global state
-let optionType='call';
-function setType(t){
-  optionType=t;
-  document.getElementById('btnCall').classList.toggle('active',t==='call');
-  document.getElementById('btnPut').classList.toggle('active',t==='put');
-}
-
-// ─────────────────────────────────────────────
-// 1. STANDARD NORMAL CDF  — Hart (1968) rational approximation
-//    Accuracy: |error| < 7.5e-8 for all x in R
-// ─────────────────────────────────────────────
-function normalCDF(x){
-  if(x===Infinity) return 1;
-  if(x===-Infinity) return 0;
-  const a1=0.254829592,a2=-0.284496736,a3=1.421413741;
-  const a4=-1.453152027,a5=1.061405429,p=0.3275911;
-  const sign=x<0?-1:1;
-  x=Math.abs(x)/Math.sqrt(2);
-  const t=1/(1+p*x);
-  const y=1-(((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x);
-  return 0.5*(1+sign*y);
-}
-
-// Standard normal PDF
-function normalPDF(x){return Math.exp(-0.5*x*x)/Math.sqrt(2*Math.PI);}
-
-// ─────────────────────────────────────────────
-// 2. BLACK-SCHOLES d1, d2
-//    d1 = [ln(S/K) + (r - q + 0.5σ²)T] / (σ√T)
-//    d2 = d1 - σ√T
-// ─────────────────────────────────────────────
-function computeD1D2(S,K,T,r,q,sigma){
-  const sqrtT=Math.sqrt(T);
-  const d1=(Math.log(S/K)+(r-q+0.5*sigma*sigma)*T)/(sigma*sqrtT);
-  const d2=d1-sigma*sqrtT;
-  return{d1,d2,sqrtT};
-}
-
-// ─────────────────────────────────────────────
-// 3. BLACK-SCHOLES PRICE
-//    Call: S·e^(-qT)·N(d1) - K·e^(-rT)·N(d2)
-//    Put:  K·e^(-rT)·N(-d2) - S·e^(-qT)·N(-d1)
-//    Continuous dividend yield q included (Merton 1973 extension)
-// ─────────────────────────────────────────────
-function blackScholes(S,K,T,r,q,sigma,type){
-  if(S<=0||K<=0||T<=1e-10||sigma<=1e-10) return 0;
-  const{d1,d2}=computeD1D2(S,K,T,r,q,sigma);
-  const discS=S*Math.exp(-q*T);
-  const discK=K*Math.exp(-r*T);
-  if(type==='call') return discS*normalCDF(d1)-discK*normalCDF(d2);
-  return discK*normalCDF(-d2)-discS*normalCDF(-d1);
-}
-
-// ─────────────────────────────────────────────
-// 4. GREEKS (closed-form BSM)
-//    Delta: ∂C/∂S — sensitivity to spot
-//    Gamma: ∂²C/∂S² — convexity (same call/put by put-call parity)
-//    Vega:  ∂C/∂σ — sensitivity to vol (per 1% move, divided by 100)
-//    Theta: ∂C/∂T — time decay (per calendar day, divided by 365)
-//    Rho:   ∂C/∂r — sensitivity to rate (per 1% move, divided by 100)
-// ─────────────────────────────────────────────
-function computeGreeks(S,K,T,r,q,sigma,type){
-  if(S<=0||K<=0||T<=1e-10||sigma<=1e-10) return{delta:0,gamma:0,vega:0,theta:0,rho:0};
-  const{d1,d2,sqrtT}=computeD1D2(S,K,T,r,q,sigma);
-  const eqT=Math.exp(-q*T), erT=Math.exp(-r*T);
-  const pdf_d1=normalPDF(d1);
-
-  const delta=type==='call'?eqT*normalCDF(d1):-eqT*normalCDF(-d1);
-  const gamma=(eqT*pdf_d1)/(S*sigma*sqrtT);
-  const vega=S*eqT*pdf_d1*sqrtT/100; // per 1% vol move
-  
-  let theta;
-  const term1=-(S*eqT*pdf_d1*sigma)/(2*sqrtT);
-  if(type==='call'){
-    theta=(term1-r*K*erT*normalCDF(d2)+q*S*eqT*normalCDF(d1))/365;
-  }else{
-    theta=(term1+r*K*erT*normalCDF(-d2)-q*S*eqT*normalCDF(-d1))/365;
-  }
-  
-  const rho=type==='call'?K*T*erT*normalCDF(d2)/100:-K*T*erT*normalCDF(-d2)/100;
-  return{delta,gamma,vega,theta,rho};
-}
-
-// ─────────────────────────────────────────────
-// 5. MONTE CARLO — Geometric Brownian Motion
-//    S(t+dt) = S(t)·exp[(r-q-½σ²)dt + σ√dt·Z]
-//    Z ~ N(0,1) — antithetic variates for variance reduction
-//    Discounting: e^(-rT) under risk-neutral measure
-// ─────────────────────────────────────────────
-function seededRandom(seed){
-  // Mulberry32 — fast, good quality, seedable
-  let s=seed>>>0;
-  return function(){
-    s+=0x6D2B79F5;
-    let t=Math.imul(s^s>>>15,1|s);
-    t^=t+Math.imul(t^t>>>7,61|t);
-    return ((t^t>>>14)>>>0)/4294967296;
-  };
-}
-
-function runMonteCarlo(S,K,T,r,q,sigma,type,N,steps,seed){
-  const dt=T/steps;
-  const drift=(r-q-0.5*sigma*sigma)*dt;
-  const diffusion=sigma*Math.sqrt(dt);
-  const discFactor=Math.exp(-r*T);
-  
-  const rand=seed!=null?seededRandom(seed):Math.random.bind(Math);
-  
-  const payoffs=new Float64Array(N);
-  const half=N/2|0;
-  
-  // Box-Muller transform for standard normals
-  function boxMuller(){
-    const u1=rand(),u2=rand();
-    return Math.sqrt(-2*Math.log(u1+1e-15))*Math.cos(2*Math.PI*u2);
-  }
-  
-  // Antithetic variates: use Z and -Z to halve variance
-  for(let i=0;i<half;i++){
-    let St=S, StAnt=S;
-    for(let j=0;j<steps;j++){
-      const z=boxMuller();
-      St    *=Math.exp(drift+diffusion*z);
-      StAnt *=Math.exp(drift-diffusion*z);
-    }
-    const payoff1=type==='call'?Math.max(St-K,0):Math.max(K-St,0);
-    const payoff2=type==='call'?Math.max(StAnt-K,0):Math.max(K-StAnt,0);
-    payoffs[i]=(payoff1+payoff2)/2;
-    payoffs[half+i]=(payoff1+payoff2)/2;
-  }
-  
-  // Statistics
-  let sum=0,sum2=0;
-  for(let i=0;i<N;i++){sum+=payoffs[i];sum2+=payoffs[i]*payoffs[i];}
-  const mean=sum/N;
-  const variance=(sum2/N-mean*mean);
-  const stdErr=Math.sqrt(variance/N);
-  const price=discFactor*mean;
-  const se=discFactor*stdErr;
-  const z95=1.96;
-  
-  // Return sample of final prices for histogram (max 200)
-  const sampleSize=Math.min(200,N);
-  const sample=[];
-  for(let i=0;i<sampleSize;i++) sample.push(payoffs[i]);
-  
-  return{
-    price,
-    stdDev:Math.sqrt(variance),
-    stdErr:se,
-    ci95Lo:price-z95*se,
-    ci95Hi:price+z95*se,
-    payoffSample:sample,
-    discFactor
-  };
-}
-
-// ─────────────────────────────────────────────
-// 6. IMPLIED VOLATILITY — Bisection + Newton-Raphson
-//    Find σ* such that BS(σ*) = marketPrice
-//    Bisection is globally convergent; NR refines locally
-// ─────────────────────────────────────────────
-function impliedVol(S,K,T,r,q,mktPrice,type,tol=1e-6,maxIter=200){
-  if(!mktPrice||mktPrice<=0) return null;
-  
-  // Intrinsic value bounds check
-  const intrinsic=type==='call'?Math.max(S*Math.exp(-q*T)-K*Math.exp(-r*T),0):
-    Math.max(K*Math.exp(-r*T)-S*Math.exp(-q*T),0);
-  if(mktPrice<intrinsic-1e-4) return null; // price below intrinsic → impossible
-  
-  // Bisection search
-  let sigLo=1e-4, sigHi=5.0;
-  let fLo=blackScholes(S,K,T,r,q,sigLo,type)-mktPrice;
-  let fHi=blackScholes(S,K,T,r,q,sigHi,type)-mktPrice;
-  if(fLo*fHi>0) return null; // no root in interval
-  
-  let sigMid=0.2;
-  for(let i=0;i<maxIter;i++){
-    sigMid=(sigLo+sigHi)/2;
-    const fMid=blackScholes(S,K,T,r,q,sigMid,type)-mktPrice;
-    if(Math.abs(fMid)<tol) break;
-    if(fLo*fMid<0) sigHi=sigMid;
-    else{sigLo=sigMid; fLo=fMid;}
-  }
-  
-  // Newton-Raphson refinement (max 10 steps)
-  let sig=sigMid;
-  for(let i=0;i<10;i++){
-    const price=blackScholes(S,K,T,r,q,sig,type);
-    const vegaRaw=(()=>{
-      if(S<=0||K<=0||T<=1e-10||sig<=1e-10) return 0;
-      const{d1,sqrtT}=computeD1D2(S,K,T,r,q,sig);
-      return S*Math.exp(-q*T)*normalPDF(d1)*sqrtT;
-    })();
-    if(Math.abs(vegaRaw)<1e-12) break;
-    const delta_sig=(price-mktPrice)/vegaRaw;
-    sig-=delta_sig;
-    if(sig<1e-4) sig=1e-4;
-    if(Math.abs(delta_sig)<tol) break;
-  }
-  return sig>1e-4&&sig<5?sig:sigMid;
-}
-
-/* ═══════════════════════════════════════════════════════════
-   UI ENGINE
-═══════════════════════════════════════════════════════════ */
-
-let charts={};
-function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
-
-function getParams(){
-  return{
-    S:+document.getElementById('inS').value,
-    K:+document.getElementById('inK').value,
-    T:+document.getElementById('inT').value,
-    r:+document.getElementById('inR').value,
-    q:+document.getElementById('inQ').value,
-    sigma:+document.getElementById('inSig').value,
-    N:+document.getElementById('inN').value,
-    steps:+document.getElementById('inSteps').value,
-    seed:document.getElementById('inSeed').value?+document.getElementById('inSeed').value:null,
-    mktPrice:document.getElementById('inMkt').value?+document.getElementById('inMkt').value:null,
-    type:optionType
-  };
-}
-
-function validateParams(p){
-  if(p.S<=0) return'Spot price must be > 0';
-  if(p.K<=0) return'Strike must be > 0';
-  if(p.T<=0) return'Maturity must be > 0';
-  if(p.sigma<=0) return'Volatility must be > 0';
-  if(p.N<100) return'Need at least 100 simulations';
-  return null;
-}
-
-function runPricing(){
-  const badge=document.getElementById('statusBadge');
-  badge.textContent='COMPUTING';
-  badge.style.color='var(--orange)';
-  badge.style.borderColor='rgba(255,140,66,0.3)';
-  badge.style.background='rgba(255,140,66,0.08)';
-  
-  // Yield to browser to update UI, then compute
-  setTimeout(()=>{
-    const p=getParams();
-    const err=validateParams(p);
-    if(err){
-      alert('Input error: '+err);
-      badge.textContent='ERROR';
-      badge.style.color='var(--red)';
-      return;
-    }
-    
-    // Compute all outputs
-    const bsPrice=blackScholes(p.S,p.K,p.T,p.r,p.q,p.sigma,p.type);
-    const greeks=computeGreeks(p.S,p.K,p.T,p.r,p.q,p.sigma,p.type);
-    const mc=runMonteCarlo(p.S,p.K,p.T,p.r,p.q,p.sigma,p.type,p.N,p.steps,p.seed);
-    const iv=p.mktPrice?impliedVol(p.S,p.K,p.T,p.r,p.q,p.mktPrice,p.type):null;
-    
-    renderResults(p,bsPrice,greeks,mc,iv);
-    
-    badge.textContent='LIVE';
-    badge.style.color='var(--accent)';
-    badge.style.borderColor='rgba(0,255,159,0.2)';
-    badge.style.background='rgba(0,255,159,0.08)';
-  },20);
-}
-
-function fmt(v,d=4){return v==null?'—':v.toFixed(d);}
-function fmtPct(v,d=2){return v==null?'—':(v*100).toFixed(d)+'%';}
-
-function renderResults(p,bsPrice,greeks,mc,iv){
-  // ── Model Insight text
-  const dominant=Object.entries(greeks)
-    .map(([k,v])=>[k,Math.abs(v)])
-    .sort((a,b)=>b[1]-a[1])[0][0];
-  
-  const moneyness=p.S/p.K;
-  let moneynessText=moneyness>1.05?'in-the-money':moneyness<0.95?'out-of-the-money':'near at-the-money';
-  
-  const marketText=p.mktPrice?`The market price of ${fmt(p.mktPrice,2)} implies a ${iv?fmtPct(iv):'N/A'} implied volatility — ${p.mktPrice>bsPrice?'above':'below'} the theoretical price by ${fmt(Math.abs(p.mktPrice-bsPrice),2)} (${((Math.abs(p.mktPrice-bsPrice)/bsPrice)*100).toFixed(1)}%). Under BSM assumptions, the option appears ${p.mktPrice>bsPrice?'overpriced':'underpriced'} relative to model.`:'No market price provided. Enable market price comparison to compute implied volatility.';
-  
-  const content=document.getElementById('contentArea');
-  content.innerHTML=`
-    <!-- PRICE RESULTS -->
-    <div class="results-grid">
-      <div class="result-card">
-        <div class="result-label">Black-Scholes Price</div>
-        <div class="result-value accent">${fmt(bsPrice,4)}</div>
-        <div class="result-sub">${p.type.toUpperCase()} · S=${p.S} K=${p.K} T=${p.T}y</div>
+      <div class="section-title">Market Parameters</div>
+      <div class="field">
+        <label>Spot Price S₀</label>
+        <input type="number" id="inputS" value="100" step="1" min="0.01" />
       </div>
-      <div class="result-card">
-        <div class="result-label">Monte Carlo Price (N=${p.N.toLocaleString()})</div>
-        <div class="result-value blue">${fmt(mc.price,4)}</div>
-        <div class="result-sub">95% CI [ ${fmt(mc.ci95Lo,4)} , ${fmt(mc.ci95Hi,4)} ]</div>
+      <div class="field">
+        <label>Strike K</label>
+        <input type="number" id="inputK" value="100" step="1" min="0.01" />
       </div>
-      <div class="result-card">
-        <div class="result-label">Implied Volatility</div>
-        <div class="result-value" style="color:var(--purple)">${iv?fmtPct(iv):'— (no mkt price)'}</div>
-        <div class="result-sub">Bisection + Newton-Raphson</div>
+      <div class="field">
+        <label>Maturity T (years)</label>
+        <input type="number" id="inputT" value="1" step="0.01" min="0" />
       </div>
-      <div class="result-card">
-        <div class="result-label">MC Std Error / IC 95%</div>
-        <div class="result-value" style="color:var(--orange);font-size:16px;">${fmt(mc.stdErr,5)}</div>
-        <div class="result-sub">σ_payoffs = ${fmt(mc.stdDev,4)}</div>
+      <div class="field">
+        <label>Risk-Free Rate r (%)</label>
+        <input type="number" id="inputR" value="5" step="0.1" />
       </div>
-    </div>
-    
-    <!-- GREEKS -->
-    <div class="greeks-bar">
-      <div class="greek-item"><div class="greek-name">Δ Delta</div><div class="greek-val ${greeks.delta>=0?'pos':'neg'}">${fmt(greeks.delta,4)}</div></div>
-      <div class="greek-item"><div class="greek-name">Γ Gamma</div><div class="greek-val neu">${fmt(greeks.gamma,6)}</div></div>
-      <div class="greek-item"><div class="greek-name">ν Vega</div><div class="greek-val pos">${fmt(greeks.vega,4)}</div></div>
-      <div class="greek-item"><div class="greek-name">Θ Theta</div><div class="greek-val neg">${fmt(greeks.theta,4)}</div></div>
-      <div class="greek-item"><div class="greek-name">ρ Rho</div><div class="greek-val ${greeks.rho>=0?'pos':'neg'}">${fmt(greeks.rho,4)}</div></div>
-    </div>
-    
-    <!-- TABS -->
-    <div class="tabs">
-      <div class="tab active" onclick="switchTab(this,'charts')">CHARTS</div>
-      <div class="tab" onclick="switchTab(this,'montecarlo')">MONTE CARLO</div>
-      <div class="tab" onclick="switchTab(this,'market')">MARKET</div>
-      <div class="tab" onclick="switchTab(this,'insight')">MODEL INSIGHT</div>
-    </div>
-    
-    <!-- TAB: CHARTS -->
-    <div id="tab-charts" class="tab-content">
-      <div class="chart-grid">
-        <div class="chart-card">
-          <div class="chart-title">Payoff at Maturity</div>
-          <div class="chart-wrap"><canvas id="cPayoff"></canvas></div>
+      <div class="field">
+        <label>Volatility σ (%)</label>
+        <input type="number" id="inputSigma" value="20" step="0.5" min="0" />
+      </div>
+      <div class="field">
+        <label>Dividend Yield q (%)</label>
+        <input type="number" id="inputQ" value="0" step="0.1" min="0" />
+      </div>
+
+      <div class="section-title">Monte Carlo</div>
+      <div class="field">
+        <label>Simulations N</label>
+        <input type="number" id="inputN" value="10000" step="1000" min="100" max="1000000" />
+      </div>
+      <div class="field">
+        <label>Steps / Path</label>
+        <input type="number" id="inputSteps" value="52" step="1" min="1" max="1000" />
+      </div>
+      <div class="field">
+        <label>Seed (optional)</label>
+        <input type="text" id="inputSeed" placeholder="random" />
+      </div>
+
+      <div class="section-title">Market Price (optional)</div>
+      <div class="field">
+        <label>Market Price</label>
+        <input type="number" id="inputMarketPrice" placeholder="—" step="0.01" min="0" />
+      </div>
+
+      <button id="runBtn">▶ RUN PRICING ENGINE</button>
+    </aside>
+
+    <main class="main-panel">
+      <div class="placeholder" id="placeholderMsg">
+        <span>▸ Configure parameters and run the pricing engine</span>
+      </div>
+
+      <div id="resultsPanel">
+        <div class="results-grid">
+          <div class="result-cell">
+            <div class="label">BLACK-SCHOLES</div>
+            <div class="value" id="outBSPrice">—</div>
+          </div>
+          <div class="result-cell">
+            <div class="label">MONTE CARLO</div>
+            <div class="value secondary" id="outMCPrice">—</div>
+          </div>
+          <div class="result-cell">
+            <div class="label">MC STD ERROR</div>
+            <div class="value neutral" id="outMCError">—</div>
+          </div>
         </div>
-        <div class="chart-card">
-          <div class="chart-title">MC Payoff Distribution</div>
-          <div class="chart-wrap"><canvas id="cDist"></canvas></div>
+
+        <div class="tabs">
+          <button class="tab-btn" data-tab="greeks">GREEKS</button>
+          <button class="tab-btn" data-tab="charts">CHARTS</button>
+          <button class="tab-btn" data-tab="analysis">ANALYSIS</button>
         </div>
-        <div class="chart-card">
-          <div class="chart-title">Price vs Volatility (σ sensitivity)</div>
-          <div class="chart-wrap"><canvas id="cVol"></canvas></div>
+
+        <div id="tab-greeks" class="tab-panel">
+          <div class="d-row">
+            <div class="d-cell"><div class="label">d₁</div><div class="value" id="outD1">—</div></div>
+            <div class="d-cell"><div class="label">d₂</div><div class="value" id="outD2">—</div></div>
+          </div>
+          <div class="greeks-grid">
+            <div class="greek-cell"><div class="label">DELTA</div><div class="value" id="outDelta">—</div></div>
+            <div class="greek-cell"><div class="label">GAMMA</div><div class="value" id="outGamma">—</div></div>
+            <div class="greek-cell"><div class="label">THETA / day</div><div class="value" id="outTheta">—</div></div>
+            <div class="greek-cell"><div class="label">VEGA / 1%</div><div class="value" id="outVega">—</div></div>
+            <div class="greek-cell"><div class="label">RHO / 1%</div><div class="value" id="outRho">—</div></div>
+          </div>
         </div>
-        <div class="chart-card">
-          <div class="chart-title">Price vs Spot (Delta profile)</div>
-          <div class="chart-wrap"><canvas id="cSpot"></canvas></div>
+
+        <div id="tab-charts" class="tab-panel">
+          <div class="chart-grid">
+            <div class="chart-box">
+              <h3>PAYOFF &amp; P/L</h3>
+              <canvas id="payoffChart" width="480" height="220"></canvas>
+            </div>
+            <div class="chart-box">
+              <h3>MC FINAL PRICE DISTRIBUTION</h3>
+              <canvas id="distChart" width="480" height="220"></canvas>
+            </div>
+            <div class="chart-box">
+              <h3>PRICE vs VOLATILITY</h3>
+              <canvas id="volChart" width="480" height="220"></canvas>
+            </div>
+            <div class="chart-box">
+              <h3>PRICE vs SPOT</h3>
+              <canvas id="spotChart" width="480" height="220"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-analysis" class="tab-panel">
+          <div class="iv-row">
+            <div class="iv-item"><div class="label">MARKET PRICE</div><div class="value" id="outMarketPrice">—</div></div>
+            <div class="iv-item"><div class="label">IMPLIED VOLATILITY</div><div class="value" id="outIV">—</div></div>
+          </div>
         </div>
       </div>
-    </div>
-    
-    <!-- TAB: MC -->
-    <div id="tab-montecarlo" class="tab-content" style="display:none">
-      <div class="mc-grid">
-        <div class="mc-stat"><div class="mc-stat-label">MC Price</div><div class="mc-stat-val" style="color:var(--blue)">${fmt(mc.price,5)}</div></div>
-        <div class="mc-stat"><div class="mc-stat-label">Std Error</div><div class="mc-stat-val">${fmt(mc.stdErr,6)}</div></div>
-        <div class="mc-stat"><div class="mc-stat-label">Payoff σ</div><div class="mc-stat-val">${fmt(mc.stdDev,4)}</div></div>
-        <div class="mc-stat"><div class="mc-stat-label">Discount e^-rT</div><div class="mc-stat-val">${fmt(mc.discFactor,5)}</div></div>
-        <div class="mc-stat"><div class="mc-stat-label">CI 95% Lo</div><div class="mc-stat-val" style="color:var(--red)">${fmt(mc.ci95Lo,4)}</div></div>
-        <div class="mc-stat"><div class="mc-stat-label">CI 95% Hi</div><div class="mc-stat-val" style="color:var(--accent)">${fmt(mc.ci95Hi,4)}</div></div>
-        <div class="mc-stat"><div class="mc-stat-label">Simulations</div><div class="mc-stat-val">${p.N.toLocaleString()}</div></div>
-        <div class="mc-stat"><div class="mc-stat-label">Steps/Path</div><div class="mc-stat-val">${p.steps}</div></div>
-      </div>
-      <div class="insight-card" style="border-left-color:var(--blue)">
-        <div class="insight-title" style="color:var(--blue)">Monte Carlo — Technical Notes</div>
-        <div class="insight-text">
-          <p>GBM discretisation under risk-neutral measure Q. Drift: (r−q−½σ²)dt, diffusion: σ√dt·Z.</p>
-          <p>Variance reduction via <strong>antithetic variates</strong>: each path Z is paired with −Z, halving the estimator variance at no extra cost.</p>
-          <p>Standard error = σ_payoffs / √N · e^(−rT). IC 95% = price ± 1.96 · SE.</p>
-          <p>BS price ${fmt(bsPrice,4)} vs MC price ${fmt(mc.price,4)} — diff: ${fmt(Math.abs(bsPrice-mc.price),4)} (${((Math.abs(bsPrice-mc.price)/bsPrice)*100).toFixed(2)}%). Convergence expected as N→∞.</p>
-        </div>
-      </div>
-    </div>
-    
-    <!-- TAB: MARKET -->
-    <div id="tab-market" class="tab-content" style="display:none">
-      ${p.mktPrice?`
-      <div class="market-card">
-        <div class="section-title">Market vs Model Comparison</div>
-        <div class="market-row"><span class="market-key">Market Price</span><span class="market-val">${fmt(p.mktPrice,4)}</span></div>
-        <div class="market-row"><span class="market-key">BS Theoretical</span><span class="market-val" style="color:var(--accent)">${fmt(bsPrice,4)}</span></div>
-        <div class="market-row"><span class="market-key">Absolute Difference</span><span class="market-val" style="color:${p.mktPrice>bsPrice?'var(--red)':'var(--accent)'}">${p.mktPrice>bsPrice?'+':''}${fmt(p.mktPrice-bsPrice,4)}</span></div>
-        <div class="market-row"><span class="market-key">Relative Difference</span><span class="market-val">${(((p.mktPrice-bsPrice)/bsPrice)*100).toFixed(2)}%</span></div>
-        <div class="market-row"><span class="market-key">Implied Volatility</span><span class="market-val" style="color:var(--purple)">${iv?fmtPct(iv):'—'}</span></div>
-        <div class="market-row"><span class="market-key">Model Vol (σ input)</span><span class="market-val">${fmtPct(p.sigma)}</span></div>
-        <div class="market-row"><span class="market-key">Vol Premium (IV − σ)</span><span class="market-val" style="color:${iv&&iv>p.sigma?'var(--red)':'var(--accent)'}">${iv?fmtPct(iv-p.sigma):'—'}</span></div>
-        <div class="market-row"><span class="market-key">Valuation Signal</span>
-          <span class="market-val">
-            <span class="iv-badge ${p.mktPrice>bsPrice?'iv-over':'iv-under'}">${p.mktPrice>bsPrice?'OVERPRICED':'UNDERPRICED'}</span>
-          </span>
-        </div>
-      </div>
-      `:`
-      <div class="insight-card">
-        <div class="insight-title">No Market Price Provided</div>
-        <div class="insight-text"><p>Enter a market price in the sidebar to enable implied volatility computation and market vs model comparison.</p></div>
-      </div>
-      `}
-    </div>
-    
-    <!-- TAB: INSIGHT -->
-    <div id="tab-insight" class="tab-content" style="display:none">
-      <div class="insight-card">
-        <div class="insight-title">Model Insight — Automated Analysis</div>
-        <div class="insight-text">
-          <p>This ${p.type.toUpperCase()} option is currently <strong>${moneynessText}</strong> (S/K = ${(p.S/p.K).toFixed(3)}), with a theoretical BSM price of <strong>${fmt(bsPrice,4)}</strong>.</p>
-          <p>At σ = ${fmtPct(p.sigma)}, the option carries a vega of ${fmt(greeks.vega,4)} per 1% vol move. A 5% increase in volatility would add approximately ${fmt(greeks.vega*5,4)} to the premium, all else equal.</p>
-          <p>The dominant Greek by magnitude is <strong>${dominant}</strong> (${fmt(greeks[dominant],5)}), meaning the position is most sensitive to changes in ${dominant==='delta'?'spot price':dominant==='gamma'?'spot price convexity':dominant==='vega'?'implied volatility':dominant==='theta'?'time (decay)':'interest rates'}.</p>
-          <p>Theta = ${fmt(greeks.theta,5)} per calendar day — the option loses approximately ${fmt(Math.abs(greeks.theta),4)} of value daily from time decay alone under current parameters.</p>
-          <p>${marketText}</p>
-          <p style="color:var(--text2);font-size:11px;">⚠ BSM assumes: frictionless markets, constant volatility, no jumps, continuous trading, lognormal returns. These assumptions are violated in practice — treat model output as a reference, not a precise prediction.</p>
-        </div>
-      </div>
-    </div>
-  `;
-  
-  // Render charts
-  renderCharts(p,bsPrice,mc,greeks);
-}
+    </main>
+  </div>
 
-function switchTab(el,name){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  ['charts','montecarlo','market','insight'].forEach(n=>{
-    const d=document.getElementById('tab-'+n);
-    if(d) d.style.display=n===name?'':'none';
-  });
-}
-
-function renderCharts(p,bsPrice,mc,greeks){
-  const GRID_COLOR='rgba(30,45,62,0.8)';
-  const TEXT_COLOR='#5A6A82';
-  const BASE_OPTS={
-    responsive:true,maintainAspectRatio:false,
-    plugins:{legend:{display:false}},
-    scales:{
-      x:{grid:{color:GRID_COLOR},ticks:{color:TEXT_COLOR,font:{family:'IBM Plex Mono',size:9}}},
-      y:{grid:{color:GRID_COLOR},ticks:{color:TEXT_COLOR,font:{family:'IBM Plex Mono',size:9}}}
-    }
-  };
-  
-  // 1. PAYOFF DIAGRAM
-  destroyChart('cPayoff');
-  const payoffSpots=Array.from({length:60},(_,i)=>p.S*0.5+i*(p.S*1.5/59));
-  const payoffVals=payoffSpots.map(s=>p.type==='call'?Math.max(s-p.K,0):Math.max(p.K-s,0));
-  const pnlVals=payoffVals.map(v=>v-bsPrice);
-  charts['cPayoff']=new Chart(document.getElementById('cPayoff'),{
-    type:'line',
-    data:{labels:payoffSpots.map(s=>s.toFixed(0)),datasets:[
-      {label:'Payoff',data:payoffVals,borderColor:'#00FF9F',borderWidth:1.5,pointRadius:0,fill:false,tension:0},
-      {label:'P&L',data:pnlVals,borderColor:'#4DAAFF',borderWidth:1,borderDash:[3,3],pointRadius:0,fill:false,tension:0}
-    ]},
-    options:{...BASE_OPTS,plugins:{legend:{display:false}},scales:{...BASE_OPTS.scales,
-      x:{...BASE_OPTS.scales.x,ticks:{...BASE_OPTS.scales.x.ticks,maxTicksLimit:6}}
-    }}
-  });
-  
-  // 2. MC PAYOFF DISTRIBUTION (histogram)
-  destroyChart('cDist');
-  const sample=mc.payoffSample;
-  const binCount=20;
-  const minV=Math.min(...sample),maxV=Math.max(...sample)+1e-9;
-  const binW=(maxV-minV)/binCount;
-  const bins=new Array(binCount).fill(0);
-  sample.forEach(v=>{const b=Math.floor((v-minV)/binW);bins[Math.min(b,binCount-1)]++;});
-  const binLabels=bins.map((_,i)=>(minV+i*binW).toFixed(2));
-  charts['cDist']=new Chart(document.getElementById('cDist'),{
-    type:'bar',
-    data:{labels:binLabels,datasets:[{data:bins,backgroundColor:'rgba(77,170,255,0.6)',borderColor:'#4DAAFF',borderWidth:1}]},
-    options:{...BASE_OPTS,scales:{...BASE_OPTS.scales,x:{...BASE_OPTS.scales.x,ticks:{...BASE_OPTS.scales.x.ticks,maxTicksLimit:6}}}}
-  });
-  
-  // 3. PRICE VS VOLATILITY
-  destroyChart('cVol');
-  const sigRange=Array.from({length:40},(_,i)=>0.01+i*0.015);
-  const bsVol=sigRange.map(s=>blackScholes(p.S,p.K,p.T,p.r,p.q,s,p.type));
-  charts['cVol']=new Chart(document.getElementById('cVol'),{
-    type:'line',
-    data:{labels:sigRange.map(s=>(s*100).toFixed(0)+'%'),datasets:[
-      {data:bsVol,borderColor:'#A78BFA',borderWidth:1.5,pointRadius:0,fill:false,tension:0.2},
-      p.mktPrice?{data:sigRange.map(()=>p.mktPrice),borderColor:'#FF4D4D',borderWidth:1,borderDash:[4,4],pointRadius:0}:{data:[]}
-    ]},
-    options:{...BASE_OPTS,scales:{...BASE_OPTS.scales,x:{...BASE_OPTS.scales.x,ticks:{...BASE_OPTS.scales.x.ticks,maxTicksLimit:6}}}}
-  });
-  
-  // 4. PRICE VS SPOT
-  destroyChart('cSpot');
-  const spotRange=Array.from({length:50},(_,i)=>p.S*0.4+i*(p.S*1.6/49));
-  const bsSpot=spotRange.map(s=>blackScholes(s,p.K,p.T,p.r,p.q,p.sigma,p.type));
-  charts['cSpot']=new Chart(document.getElementById('cSpot'),{
-    type:'line',
-    data:{labels:spotRange.map(s=>s.toFixed(1)),datasets:[
-      {data:bsSpot,borderColor:'#00FF9F',borderWidth:1.5,pointRadius:0,fill:false,tension:0.3}
-    ]},
-    options:{...BASE_OPTS,scales:{...BASE_OPTS.scales,x:{...BASE_OPTS.scales.x,ticks:{...BASE_OPTS.scales.x.ticks,maxTicksLimit:6}}}}
-  });
-}
-
-// Auto-run on load with defaults
-setTimeout(()=>runPricing(),300);
-</script>
+  <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
